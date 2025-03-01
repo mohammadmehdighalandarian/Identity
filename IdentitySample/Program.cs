@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using IdentitySample;
 using Microsoft.AspNetCore.Identity;
+using IdentitySample.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,8 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 
 builder.Services.AddDefaultIdentity<IdentityUser>()
     .AddEntityFrameworkStores<ApplicationContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddErrorDescriber<PersianErrorIdentity>();
 
 var app = builder.Build();
 

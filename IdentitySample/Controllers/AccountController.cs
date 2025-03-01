@@ -1,6 +1,8 @@
-﻿using IdentitySample.ViewModel;
+﻿using System.Text;
+using IdentitySample.ViewModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace IdentitySample.Controllers;
 
@@ -93,5 +95,72 @@ public class AccountController : Controller
     {
         var result = _signInManager.SignOutAsync();
         return RedirectToAction("index", "Home");
+    }
+
+    public IActionResult ForgotPassword()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordVM modelForgotPasswordVm)
+    {
+        var user =await _userManager.FindByEmailAsync(modelForgotPasswordVm.Email);
+        if (user is null)
+        {
+            return Ok(modelForgotPasswordVm);
+        }
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        string? callBackUrl = Url.ActionLink("ResetPassword", "Account", new { Email = user.Email, token = token },
+            Request.Scheme);
+        //TODO Send Token and body via Email 
+
+        return View();
+
+    }
+
+    public IActionResult ResetPassword(string email,string token)
+    {
+        if (string.IsNullOrEmpty(email)||string.IsNullOrEmpty(token))
+        {
+            return BadRequest();
+        }
+
+        ResetPasswordVM model = new ResetPasswordVM()
+        {
+            Token = token,
+            Email = email
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(ResetPasswordVM model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var user =await _userManager.FindByEmailAsync(model.Email);
+        if (user is null)
+        {
+            ModelState.AddModelError(string.Empty, "user not found!");
+            return View(model);
+        }
+
+        var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(model.Token));
+        var result = await _userManager.ResetPasswordAsync(user, token, model.Password);
+
+        if (!result.Succeeded)
+        {
+            foreach (var err in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, err.Description);
+            }
+        }
+
+        return RedirectToAction("Login");
     }
 }
